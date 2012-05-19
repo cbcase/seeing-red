@@ -36,9 +36,37 @@ class Fig4Topo(Topo):
         self.add_link(s1, sink,
                        port1=0, port2=0, **l6config);
 
+    def numSources(self):
+        return 4
+
+class Fig11Topo(Topo):
+    def __init__(self):
+        Topo.__init__(self)
+        l1config = {'bw': 100, 'delay': '1ms', 'max_queue_size': None }
+        l2config = {'bw': 45, 'delay': '16ms', 'max_queue_size': None }
+        l3config = {'bw': 45, 'delay': '2ms', 'max_queue_size': None }
+
+        hconfig = {'cpu': None }
+        s1 = self.add_switch('s1')
+        # hosts 1..4
+        for i in range(1, 5):
+            host = self.add_host('h%d' % i, **hconfig)
+            self.add_link(host, s1, port1=0,
+                          port2=i, **l1config)
+        # host 5
+        h5 = self.add_host('h5', **hconfig)
+        self.add_link(h5, s1, port1=0, port2=5, **l2config)
+
+        # sink
+        sink = self.add_host('sink', **hconfig)
+        self.add_link(s1, sink, port1=0, port2=0, **l3config)
+
+    def numSources(self):
+        return 5
+
 def verify_latency(net):
     sink = net.getNodeByName('sink');
-    for i in range(1, 5):
+    for i in range(1, net.topo.numSources() + 1):
         host = net.getNodeByName('h%d' % i)
         result = host.cmd('ping -c 3 %s' % sink.IP())
         print 'h%d --> sink' % i
@@ -46,12 +74,12 @@ def verify_latency(net):
 
 def verify_bandwidth(net):
     sink = net.getNodeByName('sink')
-    for i in range(1, 5):
+    for i in range(1, net.topo.numSources() + 1):
         host = net.getNodeByName('h%d' % i)
         net.iperf([host, sink])
 
 def main():
-    topo = Fig4Topo()
+    topo = Fig11Topo()
     net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
     net.start()
     dumpNetConnections(net)
