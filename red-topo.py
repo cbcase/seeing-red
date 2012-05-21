@@ -4,6 +4,9 @@ from mininet.node import CPULimitedHost
 from mininet.link import TCLink
 from mininet.util import dumpNetConnections
 
+import sys
+import os
+
 class Fig4Topo(Topo):
     "Topology from figure 4 of RED paper"
 
@@ -39,6 +42,25 @@ class Fig4Topo(Topo):
     def numSources(self):
         return 4
 
+class Fig6Topo(Topo):
+    def __init__(self):
+        Topo.__init__(self)
+        src_lconfig = {'bw': 100, 'delay': '1ms', 'max_queue_size': None}
+        dst_lconfig = {'bw': 45, 'delay': '20ms', 'max_queue_size': None}
+        hconfig = {'cpu': None}
+
+        s1 = self.add_switch('s1')
+        # hosts 1..2
+        for i in range(1, 3):
+            host = self.add_host('h%d' % i, **hconfig)
+            self.add_link(host, s1, port1=0, port2=i, **src_lconfig)
+
+        sink = self.add_host('sink', **hconfig)
+        self.add_link(s1, sink, port1=0, port2=0, **dst_lconfig)
+
+    def numSources(self):
+        return 2
+
 class Fig11Topo(Topo):
     def __init__(self):
         Topo.__init__(self)
@@ -68,6 +90,11 @@ def verify_latency(net):
     sink = net.getNodeByName('sink');
     for i in range(1, net.topo.numSources() + 1):
         host = net.getNodeByName('h%d' % i)
+        for j in range(i + 1, net.topo.numSources() + 1):
+            other_host = net.getNodeByName('h%d' % j)
+            result = host.cmd('ping -c 3 %s' % other_host.IP())
+            print 'h%d --> h%d' % (i, j)
+            print result
         result = host.cmd('ping -c 3 %s' % sink.IP())
         print 'h%d --> sink' % i
         print result
@@ -76,6 +103,9 @@ def verify_bandwidth(net):
     sink = net.getNodeByName('sink')
     for i in range(1, net.topo.numSources() + 1):
         host = net.getNodeByName('h%d' % i)
+        for j in range(i + 1, net.topo.numSources() + 1):
+            other_host = net.getNodeByName('h%d' % j)
+            net.iperf([host, other_host])
         net.iperf([host, sink])
 
 def main():
@@ -87,6 +117,8 @@ def main():
 
     verify_latency(net)
     verify_bandwidth(net)
+    #os.system("tc qdisc change dev s1-eth0 root red limit 1000000 min 10000 max 100000 avpkt 1000 burst 15 probability 0.01")
+    #os.system("tc qdisc show")
 
     net.stop()
 
