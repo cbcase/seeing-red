@@ -58,13 +58,10 @@ int main(int argc, char *argv[]) {
   int send_len = strlen(send_buf);
   for (;;) {
     int ret = send(conn, to_send, send_len, MSG_NOSIGNAL);
-    // int ret = write(conn, to_send, send_len);
-    printf ("Ret was %d\n", ret);
     if (ret < 0) {
       printf ("Write failed, breaking out\n");
       break;
     }
-    sleep(1);
   }
 
   close(conn);

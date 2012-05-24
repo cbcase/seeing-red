@@ -3,17 +3,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 
 #define QUOTE_FTP_PORT 6789
 #define SERVER_ADDR "128.12.85.111"
 
+#define MAX_WINDOW_PKTS 1000
+#define MAX_LENGTH_SECONDS 300
+
 int main(int argc, char *argv[]) {
-  if (argc != 2) {
-    printf ("Usage: ./client <server-ip-addr>\n");
+  if (argc != 4) {
+    printf ("Usage: ./client <server-ip-addr> <window-in-pkts> "
+            "<length-in-seconds> \n");
     return -1;
   }
 
@@ -23,13 +27,22 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  int window_pkts = atoi(argv[2]);
+  if (window_pkts <= 0 || window_pkts > MAX_WINDOW_PKTS) {
+    printf ("Invalid window argument: %s\n", argv[2]);
+  }
+  int n_secs = atoi(argv[3]);
+  if (n_secs <= 0 || n_secs > MAX_LENGTH_SECONDS) {
+    printf ("Invalid length argument: %s\n", argv[3]);
+  }
+
   int sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock == -1) {
     perror("socket");
     return -1;
   }
 
-  int rcv_size = 5500;
+  int rcv_size = (window_pkts * 680);
   if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcv_size,
                  sizeof rcv_size) == -1) {
     perror ("setsockopt");
@@ -50,11 +63,15 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  time_t start_time = time(NULL);
   char buf[128];
   for (;;) {
     int bytes_read = read(sock, buf, sizeof buf - 1);
     buf[bytes_read] = 0;
-    printf ("I read %d bytes\n", bytes_read);
+    time_t cur_time = time(NULL);
+    if (cur_time - start_time > n_secs) {
+      break;
+    }
   }
   close (sock);
   return 0;
