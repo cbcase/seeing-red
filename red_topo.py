@@ -9,6 +9,17 @@ import os
 from time import sleep, time
 from subprocess import Popen, PIPE
 
+#High simulation bandwdith, in Mbps
+BW_HIGH = 100
+
+#Low simulation bandwidth, in Mbps
+BW_LOW = 45
+
+#Default options to pass to tc-red; as specified originally in link.py
+DEFAULT_RED_PARAMS = {'enable_red': True, 'red_limit': 1000000,
+		      'red_min': 20000, 'red_max': 25000, 'red_avpkt': 1000,
+		      'red_burst': 20, 'red_prob': 1.0}
+
 class Fig4Topo(Topo):
     "Topology from figure 4 of RED paper"
 
@@ -45,16 +56,16 @@ class Fig4Topo(Topo):
         return 4
 
 class Fig6Topo(Topo):
-    def __init__(self):
+    def __init__(self, red_params=DEFAULT_RED_PARAMS):
         Topo.__init__(self)
-        src_lconfig = {'bw': 100, 'delay': '1ms', 'max_queue_size': None,
-		       'enable_red': True, 'red_min': 20000, 'red_max': 25000,
-		       'red_avpkt': 1000, 'red_burst': 20, 'red_prob': 1.0}
-        dst_lconfig = {'bw': 45, 'delay': '20ms', 'max_queue_size': None,
-		       'enable_red': True, 'red_min': 20000, 'red_max': 25000,
-		       'red_avpkt': 1000, 'red_burst': 20, 'red_prob': 1.0}
+	
+	src_lconfig = {'bw': BW_HIGH, 'delay': '1ms', 'max_queue_size': None}
+	src_lconfig.update(red_params)
+        
+	dst_lconfig = {'bw': BW_LOW, 'delay': '20ms', 'max_queue_size': None}
+	dst_lconfig.update(red_params)
 
-        hconfig = {'cpu': None, 'enable_red': True}
+        hconfig = {'cpu': None}
 
         s1 = self.add_switch('s1')
         # hosts 1..2
@@ -69,11 +80,17 @@ class Fig6Topo(Topo):
         return 2
 
 class Fig11Topo(Topo):
-    def __init__(self):
+    def __init__(self, red_params=DEFAULT_RED_PARAMS):
         Topo.__init__(self)
-        l1config = {'bw': 100, 'delay': '1ms', 'max_queue_size': None }
-        l2config = {'bw': 45, 'delay': '16ms', 'max_queue_size': None }
-        l3config = {'bw': 45, 'delay': '2ms', 'max_queue_size': None }
+
+        l1config = {'bw': BW_HIGH, 'delay': '1ms', 'max_queue_size': None }
+	l1config.update(red_params)
+
+        l2config = {'bw': BW_LOW, 'delay': '16ms', 'max_queue_size': None }
+	l2config.update(red_params)
+
+        l3config = {'bw': BW_LOW, 'delay': '2ms', 'max_queue_size': None }
+	l3config.update(red_params)
 
         hconfig = {'cpu': None }
         s1 = self.add_switch('s1')
