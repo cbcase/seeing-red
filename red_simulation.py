@@ -172,6 +172,9 @@ def list_mean(lst):
     return sum(lst)/float(len(lst))
 
 def run_simulation_one():
+    if not os.path.exists(SIM1_DIR):
+        os.mkdir(SIM1_DIR)
+
     print T.colored('---------- Simulation 1 ----------', 'green')
     red_min_thresh = [PKT_SZ_BYTES*k for k in [3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
     dt_max_qlen = [PKT_SZ_BYTES*k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
