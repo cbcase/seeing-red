@@ -228,28 +228,11 @@ def run_simulation_one():
         write_to_log(logfile, str(list_mean(throughput)) + '\n')
         net.stop()
 
-    #DONE:
-    #open up TCP connections with max windows of 240 packets (roughly bw-delay product)
-    #    NOTE: packets are 1000 bytes (PACKET_SZ_BYTES)
-    #modify start_senders to take num_senders, start quote-ftp-client
-    #modify start_receiver to start quote-ftp-server
-    
-    #TODO:
-    #run five 5-sec simulations for each of 11 sets of params for each DT and RED
-    #    drop tail: 15 to 140 packets (15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140)
     #    RED: max buffer size of  100 packets,
     #         min_th ranging from 3 to 50 packets
     #         max_th := 3*min_th
     #         w_q := 0.002
     #         max_p := 1/50
-    #
-    #get average queue size over this interval (HOW?????)
-    #maximum possible throughput is BW_LOW
-    #compute throughput (can just say total_bytes/5sec)
-    #log data
-    #RED/DropTail
-    #MAX_BW throughput(Mbps) 
-    #45    987   
 
 def run_simulation_two():
     pass
