@@ -4,6 +4,9 @@ from mininet.node import CPULimitedHost
 from mininet.link import TCLink
 from mininet.util import dumpNetConnections
 
+from multiprocessing import Process
+from util.monitor import monitor_qlen
+
 import sys, os, shutil
 from time import sleep, time
 from subprocess import Popen, PIPE
@@ -113,6 +116,21 @@ def verify_bandwidth(net):
             net.iperf([host, other_host])
         net.iperf([host, sink])
 
+def show_tc(net):
+    for i in range(1, net.topo.numSources() + 1):
+        host = net.getNodeByName('h%d' % i)
+        result = host.cmd('tc -s qdisc show')
+        print ('h%d tc:' % i)
+        print result
+    sink = net.getNodeByName('sink')
+    result = sink.cmd('tc -s qdisc show')
+    print ('sink:')
+    print result
+    s1 = net.getNodeByName('s1')
+    result = s1.cmd('tc -s qdisc show')
+    print ('s1:')
+    print result
+
 def verify_throughput(net):
     print 'throughput at s1 s1-eth0: ' + str(get_rates('s1-eth0')) + ' Mbps'
 
@@ -200,11 +218,17 @@ def run_simulation_one():
         #dumpNetConnections(net)
         #net.pingAll()
 
+        monitor = Process(target=monitor_qlen,
+                          args=('s1-eth0', 0.01, 'qlens/red%d.txt' % i))
+        monitor.start()
+
         start_senders(net, SIM1_N_SENDERS)
         start_receiver(net, SIM1_N_SENDERS, SIM1_LEN_SEC,
                        [SIM1_MAX_WINDOW]*SIM1_N_SENDERS)
+
         throughput = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
         write_to_log(logfile, str(list_mean(throughput)) + '\n')
+        monitor.terminate()
         net.stop()
 
     "Run DropTail simulation"
@@ -221,11 +245,18 @@ def run_simulation_one():
         #dumpNetConnections(net)
         #net.pingAll()
 
+        monitor = Process(target=monitor_qlen,
+                          args=('s1-eth0', 0.01, 'qlens/dt%d.txt' % i))
+        monitor.start()
+
         start_senders(net, SIM1_N_SENDERS)
         start_receiver(net, SIM1_N_SENDERS, SIM1_LEN_SEC,
                        [SIM1_MAX_WINDOW]*SIM1_N_SENDERS)
+
+
         throughput = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
         write_to_log(logfile, str(list_mean(throughput)) + '\n')
+        monitor.terminate()
         net.stop()
 
     #    RED: max buffer size of  100 packets,
