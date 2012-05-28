@@ -46,6 +46,8 @@ SIM1_N_SENDERS = 2
 #Directory to save Simulation 1 results into
 SIM1_DIR = 'sim1'
 
+#The queue lengths measured during sim1
+QLENS_DIR = 'qlens'
 
 
 def get_txbytes(iface):
@@ -193,6 +195,9 @@ def run_simulation_one():
     if not os.path.exists(SIM1_DIR):
         os.mkdir(SIM1_DIR)
 
+    if not os.path.exists(QLENS_DIR):
+        os.mkdir(QLENS_DIR)
+
     print T.colored('---------- Simulation 1 ----------', 'green')
     red_min_thresh = [PKT_SZ_BYTES*k for k in [3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
     dt_max_qlen = [PKT_SZ_BYTES*k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
@@ -219,7 +224,7 @@ def run_simulation_one():
         #net.pingAll()
 
         monitor = Process(target=monitor_qlen,
-                          args=('s1-eth0', 0.01, 'qlens/red%d.txt' % i))
+                          args=('s1-eth0', 0.01, '%s/red%d.txt' % (QLENS_DIR, i)))
         monitor.start()
 
         start_senders(net, SIM1_N_SENDERS)
@@ -246,7 +251,7 @@ def run_simulation_one():
         #net.pingAll()
 
         monitor = Process(target=monitor_qlen,
-                          args=('s1-eth0', 0.01, 'qlens/dt%d.txt' % i))
+                          args=('s1-eth0', 0.01, '%s/dt%d.txt' % (QLENS_DIR, i)))
         monitor.start()
 
         start_senders(net, SIM1_N_SENDERS)
