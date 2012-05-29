@@ -180,7 +180,7 @@ class TCIntf( Intf ):
     def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
                 enable_ecn=False, enable_red=False, red_limit=1000000,
 		red_min=20000, red_max=25000, red_avpkt=1000, red_burst=20,
-		red_prob=1.0 ):
+		red_prob=1.0, max_queue_size=None ):
         "Return tc commands to set bandwidth"
 	#print "RED BURST: " + str(red_burst) + "XXXXXXXXXXXXXXXX"
 
@@ -210,7 +210,8 @@ class TCIntf( Intf ):
             else:
                 cmds += [ '%s qdisc add dev %s root handle 1:0 htb default 1',
                          '%s class add dev %s parent 1:0 classid 1:1 htb ' +
-                         'rate %fMbit burst 15k' % bw ]
+                         'rate %fMbit burst 15k' % bw +
+                         ((' limit %d' % max_queue_size) if max_queue_size else '')]
             parent = ' parent 1:1 '
 
             # ECN or RED
@@ -290,7 +291,8 @@ class TCIntf( Intf ):
                                  enable_ecn=enable_ecn, enable_red=enable_red,
                                  red_limit=red_limit, red_min=red_min,
 				 red_max=red_max, red_avpkt=red_avpkt,
-				 red_burst=red_burst, red_prob=red_prob )
+				 red_burst=red_burst, red_prob=red_prob,
+                                 max_queue_size=max_queue_size )
         cmds += bwcmds
 
         # Delay/loss/max_queue_size using netem
