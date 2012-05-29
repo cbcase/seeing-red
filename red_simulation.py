@@ -142,6 +142,7 @@ def start_senders(net, n_senders):
         h = net.getNodeByName('h%d' % i)
         c = '%s &' % FTP_SERVER
         h.cmd(c)
+        #h.sendCmd('tcpdump -s 65535 -w tcp_logdt%d-%d.pcap' % (i, j))
 
 def start_receiver(net, n_senders, sim_duration, max_window_list):
     recvr = net.getNodeByName('sink')
@@ -199,8 +200,9 @@ def run_simulation_one():
         os.mkdir(QLENS_DIR)
 
     print T.colored('---------- Simulation 1 ----------', 'green')
-    red_min_thresh = [PKT_SZ_BYTES*k for k in [3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
-    dt_max_qlen = [PKT_SZ_BYTES*k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
+    red_min_thresh = [PKT_SZ_BYTES*k for k in [1, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
+    dt_max_qlen = [k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
+    #dt_max_qlen = [PKT_SZ_BYTES*k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
     nrun = 11
 
     "Run RED simulation"
@@ -215,13 +217,14 @@ def run_simulation_one():
                       'red_max': 3*red_min_thresh[i],
                       'red_avpkt': 1000,
                       'red_burst': (2*red_min_thresh[i]+3*red_min_thresh[i])/3000,
-                      'red_prob': 1.0/50}
+                      'red_prob': 1.0/5}
         topo = Fig6Topo(red_params=red_params)
-    
+
         net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
         net.start()
         #dumpNetConnections(net)
         #net.pingAll()
+        verify_latency(net)
 
         monitor = Process(target=monitor_qlen,
                           args=('s1-eth0', 0.01, '%s/red%d.txt' % (QLENS_DIR, i)))
@@ -249,6 +252,7 @@ def run_simulation_one():
         net.start()
         #dumpNetConnections(net)
         #net.pingAll()
+        verify_latency(net)
 
         monitor = Process(target=monitor_qlen,
                           args=('s1-eth0', 0.01, '%s/dt%d.txt' % (QLENS_DIR, i)))
