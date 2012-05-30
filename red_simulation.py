@@ -224,7 +224,7 @@ def run_simulation_one():
         net.start()
         #dumpNetConnections(net)
         #net.pingAll()
-        verify_latency(net)
+        #verify_latency(net)
 
         monitor = Process(target=monitor_qlen,
                           args=('s1-eth0', 0.01, '%s/red%d.txt' % (QLENS_DIR, i)))
