@@ -210,8 +210,7 @@ class TCIntf( Intf ):
             else:
                 cmds += [ '%s qdisc add dev %s root handle 1:0 htb default 1',
                          '%s class add dev %s parent 1:0 classid 1:1 htb ' +
-                         'rate %fMbit burst 15k' % bw +
-                         ((' limit %d' % max_queue_size) if max_queue_size else '')]
+                         'rate %fMbit burst 15k' % bw ]
             parent = ' parent 1:1 '
 
             # ECN or RED
