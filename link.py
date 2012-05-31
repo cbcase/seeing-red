@@ -177,10 +177,7 @@ class TCIntf( Intf ):
        Allows specification of bandwidth limits (various methods)
        as well as delay, loss and max queue length"""
 
-    def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
-                enable_ecn=False, enable_red=False, red_limit=1000000,
-		red_min=20000, red_max=25000, red_avpkt=1000, red_burst=20,
-		red_prob=1.0, max_queue_size=None ):
+    def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False):
         "Return tc commands to set bandwidth"
 	#print "RED BURST: " + str(red_burst) + "XXXXXXXXXXXXXXXX"
 
@@ -213,23 +210,33 @@ class TCIntf( Intf ):
                          'rate %fMbit burst 15k' % bw ]
             parent = ' parent 1:1 '
 
-            # ECN or RED
-            if enable_ecn:
-                cmds += [ '%s qdisc add dev %s' + parent +
-                          'handle 10: red limit 1000000 ' +
-                          'min 20000 max 25000 avpkt 1000 ' +
-                          'burst 20 ' +
-                          'bandwidth %fmbit probability 1 ecn' % bw ]
-                parent = ' parent 10: '
-            elif enable_red:
-                cmds += [ '%s qdisc add dev %s' + parent +
-                          'handle 10: red limit %d ' % red_limit +
-                          'min %d max %d avpkt %d ' % (red_min, red_max, red_avpkt) +
-                          'burst %d ' % red_burst +
-                          'bandwidth %fmbit probability %f' % (bw, red_prob) ]
-                parent = ' parent 10: '
-
         return cmds, parent
+
+    @staticmethod
+    def markingCmds( parent, bw=None, enable_ecn=False, enable_red=False,
+                     red_limit = 1000000, red_min=20000, red_max=25000,
+                     red_avpkt=1000, red_burst=20, red_prob=1.0):
+        if (enable_ecn and enable_red):
+            error('Cannot enable both ECN and RED\n')
+        if bw is None:
+            return []
+
+        if enable_ecn:
+            cmd = [ '%s qdisc add dev %s' + parent +
+                    'handle 20: red limit %d ' % red_limit +
+                    'min %d max %d avpkt %d ' % (red_min, red_max, red_avpkt) +
+                    'burst %d ' % red_burst +
+                    'bandwidth %fmbit probability 1 ecn' % bw ]
+        elif enable_red:
+            cmd = [ '%s qdisc add dev %s' + parent +
+                    'handle 20: red limit %d ' % red_limit +
+                    'min %d max %d avpkt %d ' % (red_min, red_max, red_avpkt) +
+                    'burst %d ' % red_burst +
+                    'bandwidth %fmbit probability %f' % (bw, red_prob) ]
+        else:
+            cmd = []
+
+        return cmd
 
     @staticmethod
     def delayCmds( parent, delay=None, loss=None,
@@ -251,7 +258,8 @@ class TCIntf( Intf ):
                 cmds = [ '%s qdisc add dev %s ' + parent +
                          ' handle 10: netem ' +
                           netemargs ]
-        return cmds
+                parent = ' parent 10: '
+        return cmds, parent
 
     def tc( self, cmd, tc='tc' ):
         "Execute tc command for our interface"
@@ -286,18 +294,20 @@ class TCIntf( Intf ):
 
         # Bandwidth limits via various methods
         bwcmds, parent = self.bwCmds( bw=bw, speedup=speedup,
-                                 use_hfsc=use_hfsc, use_tbf=use_tbf,
-                                 enable_ecn=enable_ecn, enable_red=enable_red,
-                                 red_limit=red_limit, red_min=red_min,
-				 red_max=red_max, red_avpkt=red_avpkt,
-				 red_burst=red_burst, red_prob=red_prob,
-                                 max_queue_size=max_queue_size )
+                                 use_hfsc=use_hfsc, use_tbf=use_tbf )
         cmds += bwcmds
 
         # Delay/loss/max_queue_size using netem
-        cmds += self.delayCmds( delay=delay, loss=loss,
-                                 max_queue_size=max_queue_size,
-                                 parent=parent )
+        delaycmds, parent = self.delayCmds( delay=delay, loss=loss,
+                                            max_queue_size=max_queue_size,
+                                            parent=parent )
+        cmds += delaycmds
+
+        # ECN / RED goes last, so logically first in qdisc pipeline
+        cmds += self.markingCmds(parent=parent, bw=bw, enable_ecn=enable_ecn,
+                                 enable_red=enable_red, red_limit=red_limit,
+                                 red_min=red_min,red_max=red_max, red_avpkt=red_avpkt,
+                                 red_burst=red_burst, red_prob=red_prob)
 
         # Ugly but functional: display configuration info
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +

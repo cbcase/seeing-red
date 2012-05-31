@@ -17,7 +17,8 @@ def monitor_qlen(iface, interval_sec = 0.01, fname='%s/qlen.txt' % default_dir):
         if matches and len(matches) > 1:
             ret.append(matches[1])
             t = "%f" % time()
-            open(fname, 'a').write(output + '\n')#t + ',' + matches[1] + '\n')
+            open(fname, 'a').write(t + ',' + matches[1] + '\n')
+            #open(fname, 'a').write(output + '\n')
         sleep(interval_sec)
     #open('qlen.txt', 'w').write('\n'.join(ret))
     return
