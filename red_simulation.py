@@ -192,6 +192,14 @@ def init_log(logfile, wstring=None):
 def list_mean(lst):
     return sum(lst)/float(len(lst))
 
+def get_avg_qlen(filename):
+    f = open(filename, 'r')
+    l = []
+    for line in f:
+        l.append(int(line.strip().split(',')[1]))
+    f.close()
+    return list_mean(l)
+
 def run_simulation_one():
     if not os.path.exists(SIM1_DIR):
         os.mkdir(SIM1_DIR)
@@ -200,14 +208,15 @@ def run_simulation_one():
         os.mkdir(QLENS_DIR)
 
     print T.colored('---------- Simulation 1 ----------', 'green')
-    red_min_thresh = [PKT_SZ_BYTES*k for k in [1, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
+    red_min_thresh = [PKT_SZ_BYTES*k for k in [3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
+    #dt_max_qlen = [k for k in [3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
     dt_max_qlen = [k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
     #dt_max_qlen = [PKT_SZ_BYTES*k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
     nrun = 11
-
+    """
     "Run RED simulation"
     logfile = '%s/redlog' % SIM1_DIR
-    init_log(logfile, 'Throughput (Mbps)\n')
+    init_log(logfile, 'Throughput (Mbps), Avg. queue length\n')
     for i in range(0, nrun):
         print T.colored('Beginning RED run %d/%d' % (i+1, nrun), 'blue')
         max_buffer = 100*PKT_SZ_BYTES
@@ -217,7 +226,7 @@ def run_simulation_one():
                       'red_max': 3*red_min_thresh[i],
                       'red_avpkt': 1000,
                       'red_burst': (2*red_min_thresh[i]+3*red_min_thresh[i])/3000,
-                      'red_prob': 1.0/5}
+                      'red_prob': 1.0/50}
         topo = Fig6Topo(red_params=red_params)
 
         net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
@@ -235,13 +244,15 @@ def run_simulation_one():
                        [SIM1_MAX_WINDOW]*SIM1_N_SENDERS)
 
         throughput = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
-        write_to_log(logfile, str(list_mean(throughput)) + '\n')
+        avg_qlen = get_avg_qlen('%s/red%d.txt' % (QLENS_DIR, i))
+        write_to_log(logfile, str(list_mean(throughput)) + ',' +
+                     str(avg_qlen) + '\n')
         monitor.terminate()
         net.stop()
-
+    """
     "Run DropTail simulation"
     logfile = '%s/dtlog' % SIM1_DIR
-    init_log(logfile, 'Throughput (Mbps)\n')
+    init_log(logfile, 'Throughput (Mbps), Avg. queue length\n')
     for i in range(0, nrun):
         print T.colored('Beginning DropTail run %d/%d' % (i+1, nrun), 'blue')
         red_params = {'enable_red': False,
@@ -252,7 +263,7 @@ def run_simulation_one():
         net.start()
         #dumpNetConnections(net)
         #net.pingAll()
-        verify_latency(net)
+        #verify_latency(net)
 
         monitor = Process(target=monitor_qlen,
                           args=('s1-eth0', 0.01, '%s/dt%d.txt' % (QLENS_DIR, i)))
@@ -264,7 +275,9 @@ def run_simulation_one():
 
 
         throughput = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
-        write_to_log(logfile, str(list_mean(throughput)) + '\n')
+        avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR, i))
+        write_to_log(logfile, str(list_mean(throughput)) + ',' +
+                     str(avg_qlen) + '\n')
         monitor.terminate()
         net.stop()
 
