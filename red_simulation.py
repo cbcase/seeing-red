@@ -217,7 +217,7 @@ def run_simulation_one():
     print T.colored('---------- Simulation 1 ----------', 'green')
     red_min_thresh = [PKT_SZ_BYTES*k for k in [3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
     #dt_max_qlen = [k for k in [3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
-    dt_max_qlen = [k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
+    dt_max_qlen = [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]
     #dt_max_qlen = [PKT_SZ_BYTES*k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
     nrun = 11
 
@@ -256,7 +256,7 @@ def run_simulation_one():
                      str(avg_qlen) + '\n')
         monitor.terminate()
         net.stop()
-
+    
     "Run DropTail simulation"
     logfile = '%s/dtlog' % SIM1_DIR
     init_log(logfile, 'Throughput (Mbps), Avg. queue length\n')
@@ -287,7 +287,7 @@ def run_simulation_one():
                      str(avg_qlen) + '\n')
         monitor.terminate()
         net.stop()
-
+        
     #    RED: max buffer size of  100 packets,
     #         min_th ranging from 3 to 50 packets
     #         max_th := 3*min_th
