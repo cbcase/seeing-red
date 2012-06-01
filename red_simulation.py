@@ -214,7 +214,7 @@ def run_simulation_one():
     dt_max_qlen = [k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
     #dt_max_qlen = [PKT_SZ_BYTES*k for k in [15, 30, 45, 60, 75, 90, 100, 110, 120, 130, 140]]
     nrun = 11
-    """
+
     "Run RED simulation"
     logfile = '%s/redlog' % SIM1_DIR
     init_log(logfile, 'Throughput (Mbps), Avg. queue length\n')
@@ -244,13 +244,13 @@ def run_simulation_one():
         start_receiver(net, SIM1_N_SENDERS, SIM1_LEN_SEC,
                        [SIM1_MAX_WINDOW]*SIM1_N_SENDERS)
 
-        throughput = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
+        throughput = [float(z)/BW_LOW for z in get_rates('s1-eth0', 4, period=1.0, wait=1.0)]
         avg_qlen = get_avg_qlen('%s/red%d.txt' % (QLENS_DIR, i))
         write_to_log(logfile, str(list_mean(throughput)) + ',' +
                      str(avg_qlen) + '\n')
         monitor.terminate()
         net.stop()
-    """
+
     "Run DropTail simulation"
     logfile = '%s/dtlog' % SIM1_DIR
     init_log(logfile, 'Throughput (Mbps), Avg. queue length\n')
@@ -275,7 +275,7 @@ def run_simulation_one():
                        [SIM1_MAX_WINDOW]*SIM1_N_SENDERS)
 
 
-        throughput = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
+        throughput = [float(z)/BW_LOW for z in get_rates('s1-eth0', 4, period=1.0, wait=1.0)]
         avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR, i))
         write_to_log(logfile, str(list_mean(throughput)) + ',' +
                      str(avg_qlen) + '\n')
