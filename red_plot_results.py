@@ -100,7 +100,7 @@ plt.plot(keys, avg_mn, lw=2, label="Mininet", color="red", marker='s', markersiz
 plt.xlim((0, 1))
 plt.legend(loc=2)
 plt.xlabel("Throughput")
-plt.ylabel("Average queue size (pkts)")
+plt.ylabel("Average queue length (pkts)")
 
 if args.out:
     print "Saving to %s" % args.out
