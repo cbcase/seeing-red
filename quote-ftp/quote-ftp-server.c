@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -12,6 +13,9 @@ static char send_buf[1001];
 static void fill_ftps();
 
 int main(int argc, char *argv[]) {
+  struct timeval tv[1];
+  gettimeofday(tv, NULL);
+  srand(tv->tv_usec);
   fill_ftps();
   send_buf[999] = '\n';
   int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -62,6 +66,9 @@ int main(int argc, char *argv[]) {
       printf ("Write failed, breaking out\n");
       break;
     }
+    // Sleep uniform [0, 0.17ms]
+    int sleep_time = rand() % 170;
+    usleep(sleep_time);
   }
 
   close(conn);
