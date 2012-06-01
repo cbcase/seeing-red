@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +13,15 @@
 static char send_buf[1001];
 static void fill_ftps();
 
+static bool do_sleep;
+
 int main(int argc, char *argv[]) {
+  /* Pass --do-sleep to do sleep uni(0, 0.17ms) between packets. Used in RED paper. */
+  if (argc > 1 && strcmp(argv[1], "--do-sleep") == 0) {
+    do_sleep = true;
+  } else {
+    do_sleep = false;
+  }
   struct timeval tv[1];
   gettimeofday(tv, NULL);
   srand(tv->tv_usec);
@@ -66,9 +75,11 @@ int main(int argc, char *argv[]) {
       printf ("Write failed, breaking out\n");
       break;
     }
-    // Sleep uniform [0, 0.17ms]
-    int sleep_time = rand() % 170;
-    usleep(sleep_time);
+    if (do_sleep) {
+      // Sleep uniform [0, 0.17ms]
+      int sleep_time = rand() % 170;
+      usleep(sleep_time);
+    }
   }
 
   close(conn);

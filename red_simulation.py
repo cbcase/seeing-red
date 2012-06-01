@@ -137,11 +137,17 @@ def show_tc(net):
 def verify_throughput(net):
     print 'throughput at s1 s1-eth0: ' + str(get_rates('s1-eth0')) + ' Mbps'
 
-def start_senders(net, n_senders):
+def start_senders(net, n_senders, do_sleep=False):
     for i in range(1, n_senders+1):
         print 'starting server %d......' % i
         h = net.getNodeByName('h%d' % i)
-        c = '%s &' % FTP_SERVER
+        if do_sleep:
+            sleep_cmd = "--do-sleep"
+        else:
+            sleep_cmd= ""
+
+        c = '%s %s &' % (FTP_SERVER, sleep_cmd)
+        print c
         h.cmd(c)
         #h.sendCmd('tcpdump -s 65535 -w tcp_logdt%d-%d.pcap' % (i, j))
 
@@ -270,7 +276,7 @@ def run_simulation_one():
                           args=('s1-eth0', 0.01, '%s/dt%d.txt' % (QLENS_DIR, i)))
         monitor.start()
 
-        start_senders(net, SIM1_N_SENDERS)
+        start_senders(net, SIM1_N_SENDERS, do_sleep=True)
         start_receiver(net, SIM1_N_SENDERS, SIM1_LEN_SEC,
                        [SIM1_MAX_WINDOW]*SIM1_N_SENDERS)
 
