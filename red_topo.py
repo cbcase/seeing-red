@@ -84,10 +84,10 @@ class Fig11Topo(Topo):
         Topo.__init__(self)
 
         l1config = {'bw': BW_HIGH, 'delay': '1ms', 'max_queue_size': None }
-	l1config.update(red_params)
+	#l1config.update(red_params)
 
         l2config = {'bw': BW_LOW, 'delay': '16ms', 'max_queue_size': None }
-	l2config.update(red_params)
+	#l2config.update(red_params)
 
         l3config = {'bw': BW_LOW, 'delay': '2ms', 'max_queue_size': None }
 	l3config.update(red_params)

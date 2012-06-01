@@ -45,6 +45,7 @@ SIM1_N_SENDERS = 2
 
 #Directory to save Simulation 1 results into
 SIM1_DIR = 'sim1'
+SIM2_DIR = 'sim2'
 
 #The queue lengths measured during sim1
 QLENS_DIR = 'qlens'
@@ -288,7 +289,39 @@ def run_simulation_one():
     #         max_p := 1/50
 
 def run_simulation_two():
-    pass
+    if not os.path.exists(SIM2_DIR):
+        os.mkdir(SIM2_DIR)
+
+    logfile = '%s/dtlog' % SIM2_DIR
+    init_log(logfile, 'Throughput (Mbps), Avg. queue length\n')
+    dt_buf_sizes = [k * 2 for k in range(4, 12)]
+    for buf_size in dt_buf_sizes:
+        print 'Running with buf_size of %d' % buf_size;
+        red_params = {'enable_red': False,
+                      'max_queue_size': buf_size}
+        topo = Fig11Topo(red_params=red_params)
+        net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
+        net.start()
+        #net.pingAll()
+        #verify_latency(net)
+        #verify_bandwidth(net)
+
+        monitor = Process(target=monitor_qlen,
+                          args=('s1-eth0', 0.01, '%s/dt%d.txt' %
+                                (SIM2_DIR, buf_size)))
+        monitor.start()
+
+        start_senders(net, 5)
+        start_receiver(net, 5, 5, [12, 12, 12, 12, 8])
+
+        throughput = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
+        avg_qlen = get_avg_qlen('%s/dt%d.txt' % (SIM2_DIR, buf_size))
+        write_to_log(logfile, str(list_mean(throughput)) + ',' +
+                     str(avg_qlen) + '\n')
+        monitor.terminate()
+
+        net.stop()
+
 
 def main():
     "Parse command line args"
