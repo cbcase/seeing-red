@@ -1,4 +1,6 @@
 #include <arpa/inet.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +38,12 @@ int main(int argc, char *argv[]) {
   int reuse = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof reuse)
       == -1) {
+    perror ("setsockopt");
+    return -1;
+  }
+
+  int disable_nagle = 1;
+  if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &disable_nagle, sizeof disable_nagle)) {
     perror ("setsockopt");
     return -1;
   }

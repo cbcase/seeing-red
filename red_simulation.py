@@ -23,7 +23,7 @@ CUSTOM_IPERF_PATH = '~/iperf-patched/src/iperf'
 CONG = 'bic'
 
 #Size of a simulation packet in bytes
-PKT_SZ_BYTES = 1000
+PKT_SZ_BYTES = 1500
 
 #Path to FTP server executable
 FTP_SERVER = './quote-ftp/server'

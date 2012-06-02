@@ -1,7 +1,7 @@
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
-from mininet.link import TCLink
+from mininet.link import TCLink, TCIntf, Link
 from mininet.util import dumpNetConnections
 
 import sys
@@ -60,10 +60,10 @@ class Fig6Topo(Topo):
         Topo.__init__(self)
 	
 	src_lconfig = {'bw': BW_HIGH, 'delay': '1ms', 'max_queue_size': None}
-	src_lconfig.update(red_params)
-        
+
 	dst_lconfig = {'bw': BW_LOW, 'delay': '20ms', 'max_queue_size': None}
-	dst_lconfig.update(red_params)
+        switch_lconfig = dst_lconfig.copy()
+        switch_lconfig.update(red_params)
 
         hconfig = {'cpu': None}
 
@@ -74,7 +74,10 @@ class Fig6Topo(Topo):
             self.add_link(host, s1, port1=0, port2=i, **src_lconfig)
 
         sink = self.add_host('sink', **hconfig)
-        self.add_link(s1, sink, port1=0, port2=0, **dst_lconfig)
+        self.add_link(s1, sink, cls=Link, port1=0, port2=0,
+                      cls1=TCIntf, cls2=TCIntf,
+                      params1=switch_lconfig, params2=dst_lconfig)
+                      
 
     def numSources(self):
         return 2
@@ -84,13 +87,12 @@ class Fig11Topo(Topo):
         Topo.__init__(self)
 
         l1config = {'bw': BW_HIGH, 'delay': '1ms', 'max_queue_size': None }
-	#l1config.update(red_params)
 
         l2config = {'bw': BW_LOW, 'delay': '16ms', 'max_queue_size': None }
-	#l2config.update(red_params)
 
-        l3config = {'bw': BW_LOW, 'delay': '2ms', 'max_queue_size': None }
-	l3config.update(red_params)
+        dst_lconfig = {'bw': BW_LOW, 'delay': '2ms', 'max_queue_size': None }
+        switch_lconfig = dst_lconfig.copy()
+        switch_lconfig.update(red_params)
 
         hconfig = {'cpu': None }
         s1 = self.add_switch('s1')
@@ -105,7 +107,11 @@ class Fig11Topo(Topo):
 
         # sink
         sink = self.add_host('sink', **hconfig)
-        self.add_link(s1, sink, port1=0, port2=0, **l3config)
+        self.add_link(s1, sink, cls=Link, port1=0, port2=0,
+                      cls1=TCIntf, cls2=TCIntf,
+                      params1=switch_lconfig, params2=dst_lconfig)
+
+        #self.add_link(s1, sink, port1=0, port2=0, **l3config)
 
     def numSources(self):
         return 5
