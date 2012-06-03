@@ -59,7 +59,7 @@ SIM2_MAX_WINDOW_HIGH = 12
 SIM2_LEN_SEC = 10.0
 
 #Number of senders in Simulation 2
-SIM2_N_SENDERS = 2
+SIM2_N_SENDERS = 5
 
 #Directory to save Simulation2 results into
 SIM2_DIR = 'sim2'
@@ -72,7 +72,7 @@ QLENS_DIR2 = '%s/qlens' % SIM2_DIR
 def get_txbytes(iface, recv=False):
     f = open('/proc/net/dev', 'r')
     lines = f.readlines()
-    print lines
+    #print lines
     for line in lines:
         if iface in line:
             break
@@ -85,7 +85,7 @@ def get_txbytes(iface, recv=False):
     # face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
     # lo: 6175728   53444    0    0    0     0          0         0  6175728   53444    0    0    0     0       0          0
     c = 1 if recv else 9
-    print T.colored(str(iface) + str(float(line.split()[c])), 'magenta')
+    #print T.colored(str(iface) + str(float(line.split()[c])), 'magenta')
     return float(line.split()[c])
 
 def get_rates(iface, nsamples=3, period=1.0,
