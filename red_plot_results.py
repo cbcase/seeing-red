@@ -55,7 +55,7 @@ red_throughput, red_qlen = parse_two_column_data(redlog)
 dt_throughput, dt_qlen = parse_two_column_data(dtlog)
 
 plt.figure(num=None, figsize=(8,4))
-plt.scatter(red_throughput, red_qlen, s=40, c='r', marker='^', label='RED')
+plt.scatter(red_throughput, red_qlen, s=60, c='r', marker='^', label='RED')
 plt.scatter(dt_throughput, dt_qlen, s=40, c='b', marker='s', label='DropTail')
 #first(plot_quido), second(plot_quido), lw=2, label="RTT*C/$\sqrt{n}$")
 """
@@ -103,7 +103,7 @@ plt.xlabel("Throughput")
 plt.ylabel("Average queue length (pkts)")
 
 if args.out:
-    print "Saving to %s" % args.out
+    print "Saving to %s/%s" % (args.dir, args.out)
     plt.savefig(args.out)
 else:
     plt.show()

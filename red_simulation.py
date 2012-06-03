@@ -23,7 +23,7 @@ CUSTOM_IPERF_PATH = '~/iperf-patched/src/iperf'
 CONG = 'bic'
 
 #Size of a simulation packet in bytes
-PKT_SZ_BYTES = 1000
+PKT_SZ_BYTES = 1500
 
 #Path to FTP server executable
 FTP_SERVER = './quote-ftp/server'
@@ -45,10 +45,28 @@ SIM1_N_SENDERS = 2
 
 #Directory to save Simulation 1 results into
 SIM1_DIR = 'sim1'
+
+#The name of the directory in which we store queue lengths for Simulation 1
+QLENS_DIR1 = '%s/qlens' % SIM1_DIR
+
+"Simulation 2 constants"
+
+#Maximum window sizes for Simulation 2 flows; 4 senders use high, 1 uses low
+SIM2_MAX_WINDOW_LOW  = 8
+SIM2_MAX_WINDOW_HIGH = 12
+
+#Length of each flow in Simulation 2
+SIM2_LEN_SEC = 10.0
+
+#Number of senders in Simulation 2
+SIM2_N_SENDERS = 2
+
+#Directory to save Simulation2 results into
 SIM2_DIR = 'sim2'
 
-#The queue lengths measured during sim1
-QLENS_DIR = 'qlens'
+#The name of the directory in which we store queue lengths for Simulation 2
+QLENS_DIR2 = '%s/qlens' % SIM2_DIR
+
 
 
 def get_txbytes(iface):
@@ -211,8 +229,8 @@ def run_simulation_one():
     if not os.path.exists(SIM1_DIR):
         os.mkdir(SIM1_DIR)
 
-    if not os.path.exists(QLENS_DIR):
-        os.mkdir(QLENS_DIR)
+    if not os.path.exists(QLENS_DIR1):
+        os.mkdir(QLENS_DIR1)
 
     print T.colored('---------- Simulation 1 ----------', 'green')
     red_min_thresh = [PKT_SZ_BYTES*k for k in [3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50]]
@@ -243,15 +261,15 @@ def run_simulation_one():
         #verify_latency(net)
 
         monitor = Process(target=monitor_qlen,
-                          args=('s1-eth0', 0.01, '%s/red%d.txt' % (QLENS_DIR, i)))
+                          args=('s1-eth0', 0.01, '%s/red%d.txt' % (QLENS_DIR1, i)))
         monitor.start()
 
         start_senders(net, SIM1_N_SENDERS)
         start_receiver(net, SIM1_N_SENDERS, SIM1_LEN_SEC,
                        [SIM1_MAX_WINDOW]*SIM1_N_SENDERS)
-
-        throughput = [float(z)/BW_LOW for z in get_rates('s1-eth0', 4, period=1.0, wait=1.0)]
-        avg_qlen = get_avg_qlen('%s/red%d.txt' % (QLENS_DIR, i))
+        rates = get_rates('s1-eth0', nsamples=4, period=1.0, wait=1.0)
+        throughput = [float(z)/BW_LOW for z in rates]
+        avg_qlen = get_avg_qlen('%s/red%d.txt' % (QLENS_DIR1, i))
         write_to_log(logfile, str(list_mean(throughput)) + ',' +
                      str(avg_qlen) + '\n')
         monitor.terminate()
@@ -273,16 +291,16 @@ def run_simulation_one():
         #verify_latency(net)
 
         monitor = Process(target=monitor_qlen,
-                          args=('s1-eth0', 0.01, '%s/dt%d.txt' % (QLENS_DIR, i)))
+                          args=('s1-eth0', 0.01, '%s/dt%d.txt' % (QLENS_DIR1, i)))
         monitor.start()
 
         start_senders(net, SIM1_N_SENDERS, do_sleep=True)
         start_receiver(net, SIM1_N_SENDERS, SIM1_LEN_SEC,
                        [SIM1_MAX_WINDOW]*SIM1_N_SENDERS)
 
-
-        throughput = [float(z)/BW_LOW for z in get_rates('s1-eth0', 4, period=1.0, wait=1.0)]
-        avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR, i))
+        rates = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
+        throughput = [float(z)/BW_LOW for z in rates]
+        avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR1, i))
         write_to_log(logfile, str(list_mean(throughput)) + ',' +
                      str(avg_qlen) + '\n')
         monitor.terminate()
@@ -298,11 +316,17 @@ def run_simulation_two():
     if not os.path.exists(SIM2_DIR):
         os.mkdir(SIM2_DIR)
 
+    if not os.path.exists(QLENS_DIR2):
+        os.mkdir(QLENS_DIR2)
+    
+    print T.colored('---------- Simulation 2 ----------', 'green')
+
     logfile = '%s/dtlog' % SIM2_DIR
-    init_log(logfile, 'Throughput (Mbps), Avg. queue length\n')
+    init_log(logfile, 'Buffer size (pkts), Bottleneck throughput (Mbps), '
+             + 'Node 5 throughput (Mbps), Avg. queue length\n')
     dt_buf_sizes = [k * 2 for k in range(4, 12)]
     for buf_size in dt_buf_sizes:
-        print 'Running with buf_size of %d' % buf_size;
+        print T.colored('Running with buf_size of %d' % buf_size, 'blue');
         red_params = {'enable_red': False,
                       'max_queue_size': buf_size}
         topo = Fig11Topo(red_params=red_params)
@@ -314,15 +338,23 @@ def run_simulation_two():
 
         monitor = Process(target=monitor_qlen,
                           args=('s1-eth0', 0.01, '%s/dt%d.txt' %
-                                (SIM2_DIR, buf_size)))
+                                (QLENS_DIR2, buf_size)))
         monitor.start()
 
-        start_senders(net, 5)
-        start_receiver(net, 5, 5, [12, 12, 12, 12, 8])
+        start_senders(net, SIM2_N_SENDERS)
+        start_receiver(net, SIM2_N_SENDERS, SIM2_LEN_SEC,
+                       [SIM2_MAX_WINDOW_HIGH]*(SIM2_N_SENDERS-1) +
+                       [SIM2_MAX_WINDOW_LOW])
 
-        throughput = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
-        avg_qlen = get_avg_qlen('%s/dt%d.txt' % (SIM2_DIR, buf_size))
-        write_to_log(logfile, str(list_mean(throughput)) + ',' +
+        #TODO: Change '4' below
+        rates = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
+        n5_rates = get_rates('s1-eth5', 4, period=1.0, wait=1.0)
+        throughput = [float(z)/BW_LOW for z in rates]
+        n5_throughput = [float(z)/BW_LOW for z in n5_rates]
+        
+        avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR2, buf_size))
+        write_to_log(logfile, str(buf_size) + ', ' + str(list_mean(throughput)) +
+                     ', ' + str(list_mean(n5_throughput)) + ', ' + 
                      str(avg_qlen) + '\n')
         monitor.terminate()
 
