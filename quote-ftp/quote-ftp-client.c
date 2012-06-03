@@ -1,10 +1,11 @@
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -14,10 +15,12 @@
 #define MAX_WINDOW_PKTS 1000
 #define MAX_LENGTH_SECONDS 300
 
+unsigned int counts[26];
+
 int main(int argc, char *argv[]) {
-  if (argc != 4) {
+  if (argc != 4 && argc != 5) {
     printf ("Usage: ./client <server-ip-addr> <window-in-pkts> "
-            "<length-in-seconds> \n");
+            "<length-in-seconds> [output-file]\n");
     return -1;
   }
 
@@ -34,6 +37,20 @@ int main(int argc, char *argv[]) {
   int n_secs = atoi(argv[3]);
   if (n_secs <= 0 || n_secs > MAX_LENGTH_SECONDS) {
     printf ("Invalid length argument: %s\n", argv[3]);
+  }
+
+  int track_counts;
+  FILE *track_file;
+  if (argc == 4) {
+    track_counts = 0;
+    track_file = NULL;
+  } else {
+    track_counts = 1;
+    track_file = fopen(argv[4], "w");
+    if (track_file == NULL) {
+      perror("fopen");
+      return -1;
+    }
   }
 
   int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -67,13 +84,36 @@ int main(int argc, char *argv[]) {
   char buf[128];
   for (;;) {
     int bytes_read = read(sock, buf, sizeof buf - 1);
-    buf[bytes_read] = 0;
+
+    if (track_counts) {
+      int i;
+      for (i = 0; i < bytes_read; ++i) {
+	int c = buf[i] - 'A';
+	if (0 <= c && c < 26) {
+	  counts[c]++;
+	}
+      }
+    }
+
     time_t cur_time = time(NULL);
     if (cur_time - start_time > n_secs) {
       break;
     }
   }
   close (sock);
+
+  if (track_counts) {
+    unsigned int total = 0;
+    int i;
+    for (i = 0; i < 26; i++) { total += counts[i]; }
+    fprintf(track_file, "%u\n", total);
+
+    for (i = 0; i < 26; i++) {
+      fprintf(track_file, "%u\n", counts[i]);
+    }
+    fclose(track_file);
+  }
+
   return 0;
 }
 

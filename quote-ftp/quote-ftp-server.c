@@ -13,22 +13,35 @@
 #define QUOTE_FTP_PORT 6789
 
 static char send_buf[1001];
-static void fill_ftps();
+//static void fill_ftps();
 
 static bool do_sleep;
 
 int main(int argc, char *argv[]) {
+  if (argc < 2 || argc > 3) {
+    printf ("Usage: ./client <output-character> [--do-sleep]\n");
+    return -1;
+  }
+  if (strlen(argv[1]) == 0) {
+    printf ("Invalid output character\n");
+    return -1;
+  }
+
+  char c = argv[1][0];
+  memset(send_buf, c, sizeof(send_buf));
+
   /* Pass --do-sleep to do sleep uni(0, 0.17ms) between packets. Used in RED paper. */
-  if (argc > 1 && strcmp(argv[1], "--do-sleep") == 0) {
+  if (argc > 2 && strcmp(argv[2], "--do-sleep") == 0) {
     do_sleep = true;
   } else {
     do_sleep = false;
   }
+
+  /* Seed random generator */
   struct timeval tv[1];
   gettimeofday(tv, NULL);
   srand(tv->tv_usec);
-  fill_ftps();
-  send_buf[999] = '\n';
+
   int sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock == -1) {
     perror("socket");
@@ -96,6 +109,7 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+/*
 static void fill_ftps() {
   int num_ftps = sizeof send_buf / 3;
   const char *ftp = "ftp";
@@ -104,3 +118,4 @@ static void fill_ftps() {
     memcpy(send_buf + p, ftp, 3);
   }
 }
+*/
