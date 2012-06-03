@@ -12,6 +12,7 @@ from time import sleep, time
 from subprocess import Popen, PIPE
 import termcolor as T
 from argparse import ArgumentParser
+from operator import div
 
 from red_topo import *
 
@@ -59,10 +60,13 @@ SIM2_MAX_WINDOW_HIGH = 12
 SIM2_LEN_SEC = 10.0
 
 #Number of senders in Simulation 2
-SIM2_N_SENDERS = 2
+SIM2_N_SENDERS = 5
 
 #Directory to save Simulation2 results into
 SIM2_DIR = 'sim2'
+
+#File to which the sink will output data about breakdown of received bytes
+SIM2_SINK_FILE = '%s/sink_throughput.txt' % SIM2_DIR
 
 #The name of the directory in which we store queue lengths for Simulation 2
 QLENS_DIR2 = '%s/qlens' % SIM2_DIR
@@ -72,7 +76,7 @@ QLENS_DIR2 = '%s/qlens' % SIM2_DIR
 def get_txbytes(iface, recv=False):
     f = open('/proc/net/dev', 'r')
     lines = f.readlines()
-    print lines
+    #print lines
     for line in lines:
         if iface in line:
             break
@@ -85,7 +89,7 @@ def get_txbytes(iface, recv=False):
     # face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
     # lo: 6175728   53444    0    0    0     0          0         0  6175728   53444    0    0    0     0       0          0
     c = 1 if recv else 9
-    print T.colored(str(iface) + str(float(line.split()[c])), 'magenta')
+    #print T.colored(str(iface) + str(float(line.split()[c])), 'magenta')
     return float(line.split()[c])
 
 def get_rates(iface, nsamples=3, period=1.0,
@@ -157,7 +161,10 @@ def show_tc(net):
 def verify_throughput(net):
     print 'throughput at s1 s1-eth0: ' + str(get_rates('s1-eth0')) + ' Mbps'
 
-def start_senders(net, n_senders, do_sleep=False):
+def start_senders(net, n_senders, do_sleep=False, write_char='A'):
+    if isinstance(write_char, list) and len(write_char) != n_senders:
+        sys.exit('Length of write_char must equal n_senders')
+
     for i in range(1, n_senders+1):
         print 'starting server %d......' % i
         h = net.getNodeByName('h%d' % i)
@@ -165,19 +172,19 @@ def start_senders(net, n_senders, do_sleep=False):
             sleep_cmd = "--do-sleep"
         else:
             sleep_cmd= ""
-
-        c = '%s %s &' % (FTP_SERVER, sleep_cmd)
+        wc = 'A' if not isinstance(write_char, list) else write_char[i]
+        c = '%s %s %s &' % (FTP_SERVER, wc, sleep_cmd)
         print c
         h.cmd(c)
         #h.sendCmd('tcpdump -s 65535 -w tcp_logdt%d-%d.pcap' % (i, j))
 
-def start_receiver(net, n_senders, sim_duration, max_window_list):
+def start_receiver(net, n_senders, sim_duration, max_window_list, output_file=None):
     recvr = net.getNodeByName('sink')
     for i in range(1, n_senders+1):
         print 'receiver initiating connection to h%d' % i
         sender = net.getNodeByName('h%d' % i)
-        c = '%s %s %s %s &' % \
-            (FTP_CLIENT, sender.IP(), max_window_list[i-1], sim_duration)
+        c = '%s %s %s %s %s &' % \
+            (FTP_CLIENT, sender.IP(), max_window_list[i-1], sim_duration, output_file)
         print c
         recvr.cmd(c) 
 
@@ -226,6 +233,13 @@ def get_avg_qlen(filename):
         l.append(int(line.strip().split(',')[1]))
     f.close()
     return list_mean(l)
+
+def get_throughput_share(c):
+    f = open(SIM2_SINK_FILE, 'r')
+    lines = f.readlines()
+    total = lines[0]
+    idx = ord(c) - ord('A')
+    return float(lines[idx])/total
 
 def run_simulation_one():
     if not os.path.exists(SIM1_DIR):
@@ -343,16 +357,15 @@ def run_simulation_two():
                                 (QLENS_DIR2, buf_size)))
         monitor.start()
 
-        start_senders(net, SIM2_N_SENDERS)
+        start_senders(net, SIM2_N_SENDERS, write_char=['A']*(SIM2_N_SENDERS-1)+['B'])
         start_receiver(net, SIM2_N_SENDERS, SIM2_LEN_SEC,
                        [SIM2_MAX_WINDOW_HIGH]*(SIM2_N_SENDERS-1) +
-                       [SIM2_MAX_WINDOW_LOW])
+                       [SIM2_MAX_WINDOW_LOW], SIM2_SINK_FILE)
 
         #TODO: Change '4' below
-        rates = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
-        n5_rates = get_rates('s1-eth5', 4, period=1.0, wait=1.0, recv=True)
+        rates = get_rates('s1-eth0', SIM2_LEN_SEC, period=1.0, wait=1.0)
         throughput = [float(z)/BW_LOW for z in rates]
-        n5_throughput = [float(z)/BW_LOW for z in n5_rates]
+        n5_throughput = get_throughput_share('B')
         
         avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR2, buf_size))
         write_to_log(logfile, str(buf_size) + ', ' + str(list_mean(throughput)) +
