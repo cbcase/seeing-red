@@ -69,9 +69,10 @@ QLENS_DIR2 = '%s/qlens' % SIM2_DIR
 
 
 
-def get_txbytes(iface):
+def get_txbytes(iface, recv=False):
     f = open('/proc/net/dev', 'r')
     lines = f.readlines()
+    print lines
     for line in lines:
         if iface in line:
             break
@@ -83,11 +84,12 @@ def get_txbytes(iface):
     #Inter-|   Receive                                                |  Transmit
     # face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
     # lo: 6175728   53444    0    0    0     0          0         0  6175728   53444    0    0    0     0       0          0
-    return float(line.split()[9])
-
+    c = 1 if recv else 9
+    print T.colored(str(iface) + str(float(line.split()[c])), 'magenta')
+    return float(line.split()[c])
 
 def get_rates(iface, nsamples=3, period=1.0,
-              wait=3.0):
+              wait=3.0, recv=False):
     """Returns rate in Mbps"""
     # Returning nsamples requires one extra to start the timer.
     nsamples += 1
@@ -97,7 +99,7 @@ def get_rates(iface, nsamples=3, period=1.0,
     sleep(wait)
     while nsamples:
         nsamples -= 1
-        txbytes = get_txbytes(iface)
+        txbytes = get_txbytes(iface, recv)
         now = time()
         elapsed = now - last_time
         #if last_time:
@@ -348,7 +350,7 @@ def run_simulation_two():
 
         #TODO: Change '4' below
         rates = get_rates('s1-eth0', 4, period=1.0, wait=1.0)
-        n5_rates = get_rates('s1-eth5', 4, period=1.0, wait=1.0)
+        n5_rates = get_rates('s1-eth5', 4, period=1.0, wait=1.0, recv=True)
         throughput = [float(z)/BW_LOW for z in rates]
         n5_throughput = [float(z)/BW_LOW for z in n5_rates]
         
