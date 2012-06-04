@@ -375,6 +375,23 @@ def run_simulation_two():
 
         net.stop()
 
+    red_mins = [k for k in range(3, 15)]
+    for red_min in red_mins:
+        print T.colored('Running RED with min of %d' % red_min, 'blue')
+        red_params = {'enable_red': True,
+                      'red_limit': red_min * 4,
+                      'red_min': red_min,
+                      'red_max': 3 * red_min,
+                      'red_avpkt': 1000,
+                      'red_burst': (5 * red_min) / 3000,
+                      'red_prob': 1.0 / 50 }
+        topo = Fig11Topo(red_params = red_params)
+        net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
+        net.start()
+
+
+        net.stop()
+
 
 def main():
     "Parse command line args"
