@@ -71,7 +71,7 @@ SIM2_SINK_FILE = '%s/sink_throughput' % SIM2_DIR
 #The name of the directory in which we store queue lengths for Simulation 2
 QLENS_DIR2 = '%s/qlens' % SIM2_DIR
 
-
+TEST_DIR = 'test'
 
 def get_txbytes(iface, recv=False):
     f = open('/proc/net/dev', 'r')
@@ -197,21 +197,6 @@ def start_tcpprobe():
 def stop_tcpprobe():
     os.system("killall -9 cat; rmmod tcp_probe &>/dev/null;")
 
-def run_debug():
-    topo = Fig6Topo()
-    net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
-    net.start()
-    dumpNetConnections(net)
-    net.pingAll()
-
-    verify_latency(net)
-    verify_bandwidth(net)
-    start_receiver(net)
-    start_tcpprobe()
-    start_senders(net)
-    verify_throughput(net)
-    net.stop()
-
 def write_to_log(logfile, wstring):
     f = open(logfile, 'a')
     f.write(wstring)
@@ -237,17 +222,51 @@ def get_avg_qlen(filename):
 def get_throughput_share(c, n_senders):
     total = 0
     for i in range(1, n_senders+1):
-        f = open('%s%d' % (SIM2_SINK_FILE,i), 'r')
-        lines = f.readlines()
-        if len(lines) < 27:
-            sys.exit('Not enough lines in output file')
-        
+        open_count = 0
+        while True:
+            open_count = open_count + 1
+            if (open_count > 5):
+                sys.exit('Not enough lines in output file')
+            f = open('%s%d' % (SIM2_SINK_FILE,i), 'r')
+            lines = f.readlines()
+            if len(lines) == 27:
+                break
+            f.close()
+            print 'NOT ENOUGH LINES -- RETRY'
+            sleep(1.0)
+
         total = total + float(lines[0])
         b = float(lines[2])
         f.close()
         if i == n_senders:
            print T.colored(str(b/total), 'magenta')
            return b/total
+
+def run_debug():
+    if not os.path.exists(TEST_DIR):
+        os.mkdir(TEST_DIR)
+    
+    logfile = '%s/tp_log' % TEST_DIR
+    init_log(logfile, 'Throughput (Mbps)\n')
+
+    topo = BurstTestTopo()
+    net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
+    net.start()
+    dumpNetConnections(net)
+    net.pingAll()
+    """
+    verify_latency(net)
+    verify_bandwidth(net)
+    verify_throughput(net)
+    """
+    start_senders(net, n_senders=1)
+    start_receiver(net, n_senders=1, sim_duration=3,
+                   max_window_list=[SIM2_MAX_WINDOW_LOW])
+    rates = get_rates('s1-eth0', nsamples=200, period=0.01, wait=1.0)
+    for z in rates:
+        write_to_log(logfile, str(z) + '\n')
+
+    net.stop()
 
 def run_simulation_one():
     if not os.path.exists(SIM1_DIR):
@@ -382,6 +401,44 @@ def run_simulation_two():
 
         net.stop()
 
+    logfile = '%s/redlog' % SIM2_DIR
+    init_log(logfile, 'RED Min (pkts), Bottleneck throughput (Mbps), '
+             + 'Node 5 throughput (Mbps), Avg. queue length\n')
+    red_mins = [k for k in range(3, 15)]
+    for red_min in red_mins:
+        print T.colored('Running RED with min of %d' % red_min, 'blue')
+        red_params = {'enable_red': True,
+                      'red_limit': red_min * 4 * PKT_SZ_BYTES,
+                      'red_min': red_min * PKT_SZ_BYTES,
+                      'red_max': 3 * red_min * PKT_SZ_BYTES,
+                      'red_avpkt': 1000,
+                      'red_burst': (5 * red_min * PKT_SZ_BYTES) / 3000,
+                      'red_prob': 1.0 / 50 }
+        topo = Fig11Topo(red_params = red_params)
+        net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
+        net.start()
+
+        monitor = Process(target=monitor_qlen,
+                          args=('s1-eth0', 0.01, '%s/red%d.txt' %
+                                (QLENS_DIR2, red_min)))
+        monitor.start()
+        start_senders(net, SIM2_N_SENDERS, write_char=['A']*(SIM2_N_SENDERS-1)+['B'])
+        start_receiver(net, SIM2_N_SENDERS, SIM2_LEN_SEC,
+                       [SIM2_MAX_WINDOW_HIGH]*(SIM2_N_SENDERS-1) +
+                       [SIM2_MAX_WINDOW_LOW], SIM2_SINK_FILE)
+
+        #TODO: Change '4' below
+        rates = get_rates('s1-eth0', SIM2_LEN_SEC, period=1.0, wait=1.0)
+        throughput = [float(z)/BW_LOW for z in rates]
+        n5_throughput = get_throughput_share('B', SIM2_N_SENDERS)
+
+        avg_qlen = get_avg_qlen('%s/red%d.txt' % (QLENS_DIR2, red_min))
+        write_to_log(logfile, str(red_min) + ', ' + str(list_mean(throughput)) +
+                     ', ' + str(n5_throughput) + ', ' + str(avg_qlen) + '\n')
+        monitor.terminate()
+
+        net.stop()
+
 
 def main():
     "Parse command line args"
@@ -411,10 +468,14 @@ def main():
     "Run simulations"
     if args.debug:
         run_debug()
+        if args.plot:
+            plot_debug()
     if args.sim1:
         run_simulation_one()
+        if args.plot:
+            plot_sim1()
     if args.sim2:
-        run_simulation_two()
+        #run_simulation_two()
         if args.plot:
             plot_sim2()
 
