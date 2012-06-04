@@ -66,7 +66,7 @@ SIM2_N_SENDERS = 5
 SIM2_DIR = 'sim2'
 
 #File to which the sink will output data about breakdown of received bytes
-SIM2_SINK_FILE = '%s/sink_throughput.txt' % SIM2_DIR
+SIM2_SINK_FILE = '%s/sink_throughput' % SIM2_DIR
 
 #The name of the directory in which we store queue lengths for Simulation 2
 QLENS_DIR2 = '%s/qlens' % SIM2_DIR
@@ -183,8 +183,8 @@ def start_receiver(net, n_senders, sim_duration, max_window_list, output_file=No
     for i in range(1, n_senders+1):
         print 'receiver initiating connection to h%d' % i
         sender = net.getNodeByName('h%d' % i)
-        c = '%s %s %s %s %s &' % \
-            (FTP_CLIENT, sender.IP(), max_window_list[i-1], sim_duration, output_file)
+        c = '%s %s %s %s %s%d &' % \
+            (FTP_CLIENT, sender.IP(), max_window_list[i-1], sim_duration, output_file, i)
         print c
         recvr.cmd(c) 
 
@@ -234,13 +234,20 @@ def get_avg_qlen(filename):
     f.close()
     return list_mean(l)
 
-def get_throughput_share(c):
-    f = open(SIM2_SINK_FILE, 'r')
-    lines = f.readlines()
-    total = float(lines[0])
-    idx = ord(c) - ord('A')
-    print T.colored(lines[idx], 'magenta')
-    return float(lines[idx])/total
+def get_throughput_share(c, n_senders):
+    total = 0
+    for i in range(1, n_senders+1):
+        f = open('%s%d' % (SIM2_SINK_FILE,i), 'r')
+        lines = f.readlines()
+        if len(lines) < 27:
+            sys.exit('Not enough lines in output file')
+
+        total = total + float(lines[0])
+        b = float(lines[2])
+        f.close()
+        if i == n_senders:
+           print T.colored(str(float(b)/total), 'magenta')
+           return float(b)/total
 
 def run_simulation_one():
     if not os.path.exists(SIM1_DIR):
@@ -366,7 +373,7 @@ def run_simulation_two():
         #TODO: Change '4' below
         rates = get_rates('s1-eth0', SIM2_LEN_SEC, period=1.0, wait=1.0)
         throughput = [float(z)/BW_LOW for z in rates]
-        n5_throughput = get_throughput_share('B')
+        n5_throughput = get_throughput_share('B', SIM2_N_SENDERS)
         
         avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR2, buf_size))
         write_to_log(logfile, str(buf_size) + ', ' + str(list_mean(throughput)) +
