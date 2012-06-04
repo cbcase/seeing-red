@@ -111,6 +111,7 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < 26; i++) {
       fprintf(track_file, "%u\n", counts[i]);
     }
+    fflush(track_file);
     fclose(track_file);
   }
 

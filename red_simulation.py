@@ -15,7 +15,7 @@ from argparse import ArgumentParser
 from operator import div
 
 from red_topo import *
-
+from red_plot_results import *
 
 #Path to patched iperf
 CUSTOM_IPERF_PATH = '~/iperf-patched/src/iperf'
@@ -241,13 +241,13 @@ def get_throughput_share(c, n_senders):
         lines = f.readlines()
         if len(lines) < 27:
             sys.exit('Not enough lines in output file')
-
+        
         total = total + float(lines[0])
         b = float(lines[2])
         f.close()
         if i == n_senders:
-           print T.colored(str(float(b)/total), 'magenta')
-           return float(b)/total
+           print T.colored(str(b/total), 'magenta')
+           return b/total
 
 def run_simulation_one():
     if not os.path.exists(SIM1_DIR):
@@ -395,6 +395,9 @@ def main():
     parser.add_argument('--debug',
                         action='store_true',
                         help='Run debugging test')
+    parser.add_argument('--plot',
+                        action='store_true',
+                        help='Plot simulation output')
     args = parser.parse_args()
 
     if not args.sim1 and not args.sim2 and not args.debug:
@@ -412,6 +415,8 @@ def main():
         run_simulation_one()
     if args.sim2:
         run_simulation_two()
+        if args.plot:
+            plot_sim2()
 
 if __name__ =='__main__':
     main()
