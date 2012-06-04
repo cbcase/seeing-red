@@ -172,7 +172,7 @@ def start_senders(net, n_senders, do_sleep=False, write_char='A'):
             sleep_cmd = "--do-sleep"
         else:
             sleep_cmd= ""
-        wc = 'A' if not isinstance(write_char, list) else write_char[i]
+        wc = 'A' if not isinstance(write_char, list) else write_char[i-1]
         c = '%s %s %s &' % (FTP_SERVER, wc, sleep_cmd)
         print c
         h.cmd(c)
@@ -237,8 +237,9 @@ def get_avg_qlen(filename):
 def get_throughput_share(c):
     f = open(SIM2_SINK_FILE, 'r')
     lines = f.readlines()
-    total = lines[0]
+    total = float(lines[0])
     idx = ord(c) - ord('A')
+    print T.colored(lines[idx], 'magenta')
     return float(lines[idx])/total
 
 def run_simulation_one():
@@ -369,8 +370,7 @@ def run_simulation_two():
         
         avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR2, buf_size))
         write_to_log(logfile, str(buf_size) + ', ' + str(list_mean(throughput)) +
-                     ', ' + str(list_mean(n5_throughput)) + ', ' + 
-                     str(avg_qlen) + '\n')
+                     ', ' + str(n5_throughput) + ', ' + str(avg_qlen) + '\n')
         monitor.terminate()
 
         net.stop()
