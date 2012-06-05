@@ -183,8 +183,11 @@ def start_receiver(net, n_senders, sim_duration, max_window_list, output_file=No
     for i in range(1, n_senders+1):
         print 'receiver initiating connection to h%d' % i
         sender = net.getNodeByName('h%d' % i)
-        c = '%s %s %s %s %s%d &' % \
-            (FTP_CLIENT, sender.IP(), max_window_list[i-1], sim_duration, output_file, i)
+        if output_file:
+            c = '%s %s %s %s %s%d &' % \
+                (FTP_CLIENT, sender.IP(), max_window_list[i-1], sim_duration, output_file, i)
+        else:
+            c = '%s %s %s %s &' % (FTP_CLIENT, sender.IP(), max_window_list[i-1], sim_duration)
         print c
         recvr.cmd(c) 
 
@@ -480,11 +483,11 @@ def main():
         if args.plot:
             plot_debug()
     if args.sim1:
-        #run_simulation_one()
+        run_simulation_one()
         if args.plot:
             plot_sim1()
     if args.sim2:
-        #run_simulation_two()
+        run_simulation_two()
         if args.plot:
             plot_sim2()
 
