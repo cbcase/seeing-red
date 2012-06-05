@@ -132,6 +132,7 @@ int main(int argc, char *argv[]) {
 	}
       }
     }
+    fflush(track_file);
     fclose(track_file);
   }
 

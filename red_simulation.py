@@ -15,7 +15,7 @@ from argparse import ArgumentParser
 from operator import div
 
 from red_topo import *
-
+from red_plot_results import *
 
 #Path to patched iperf
 CUSTOM_IPERF_PATH = '~/iperf-patched/src/iperf'
@@ -71,7 +71,7 @@ SIM2_SINK_FILE = '%s/sink_throughput' % SIM2_DIR
 #The name of the directory in which we store queue lengths for Simulation 2
 QLENS_DIR2 = '%s/qlens' % SIM2_DIR
 
-
+TEST_DIR = 'test'
 
 def get_txbytes(iface, recv=False):
     f = open('/proc/net/dev', 'r')
@@ -197,21 +197,6 @@ def start_tcpprobe():
 def stop_tcpprobe():
     os.system("killall -9 cat; rmmod tcp_probe &>/dev/null;")
 
-def run_debug():
-    topo = Fig6Topo()
-    net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
-    net.start()
-    dumpNetConnections(net)
-    net.pingAll()
-
-    verify_latency(net)
-    verify_bandwidth(net)
-    start_receiver(net)
-    start_tcpprobe()
-    start_senders(net)
-    verify_throughput(net)
-    net.stop()
-
 def write_to_log(logfile, wstring):
     f = open(logfile, 'a')
     f.write(wstring)
@@ -254,8 +239,34 @@ def get_throughput_share(c, n_senders):
         b = float(lines[2])
         f.close()
         if i == n_senders:
-           print T.colored(str(float(b)/total), 'magenta')
-           return float(b)/total
+           print T.colored(str(b/total), 'magenta')
+           return b/total
+
+def run_debug():
+    if not os.path.exists(TEST_DIR):
+        os.mkdir(TEST_DIR)
+    
+    logfile = '%s/tp_log' % TEST_DIR
+    init_log(logfile, 'Throughput (Mbps)\n')
+
+    topo = BurstTestTopo()
+    net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
+    net.start()
+    dumpNetConnections(net)
+    net.pingAll()
+    """
+    verify_latency(net)
+    verify_bandwidth(net)
+    verify_throughput(net)
+    """
+    start_senders(net, n_senders=1)
+    start_receiver(net, n_senders=1, sim_duration=3,
+                   max_window_list=[SIM2_MAX_WINDOW_LOW])
+    rates = get_rates('s1-eth0', nsamples=200, period=0.01, wait=1.0)
+    for z in rates:
+        write_to_log(logfile, str(z) + '\n')
+
+    net.stop()
 
 def run_simulation_one():
     if not os.path.exists(SIM1_DIR):
@@ -441,6 +452,9 @@ def main():
     parser.add_argument('--debug',
                         action='store_true',
                         help='Run debugging test')
+    parser.add_argument('--plot',
+                        action='store_true',
+                        help='Plot simulation output')
     args = parser.parse_args()
 
     if not args.sim1 and not args.sim2 and not args.debug:
@@ -454,10 +468,16 @@ def main():
     "Run simulations"
     if args.debug:
         run_debug()
+        if args.plot:
+            plot_debug()
     if args.sim1:
         run_simulation_one()
+        if args.plot:
+            plot_sim1()
     if args.sim2:
-        run_simulation_two()
+        #run_simulation_two()
+        if args.plot:
+            plot_sim2()
 
 if __name__ =='__main__':
     main()

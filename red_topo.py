@@ -20,6 +20,7 @@ DEFAULT_RED_PARAMS = {'enable_red': True, 'red_limit': 1000000,
 		      'red_min': 20000, 'red_max': 25000, 'red_avpkt': 1000,
 		      'red_burst': 20, 'red_prob': 1.0}
 
+
 class Fig4Topo(Topo):
     "Topology from figure 4 of RED paper"
 
@@ -54,6 +55,28 @@ class Fig4Topo(Topo):
 
     def numSources(self):
         return 4
+
+class BurstTestTopo(Topo):
+    "Topology to test our bursty traffic generator"
+    def __init__(self, red_params=DEFAULT_RED_PARAMS):
+        Topo.__init__(self)
+	src_lconfig = {'bw': BW_LOW, 'delay': '16ms', 'max_queue_size': None}
+	dst_lconfig = {'bw': BW_LOW, 'delay': '2ms', 'max_queue_size': None}
+        switch_lconfig = dst_lconfig.copy()
+        switch_lconfig.update(red_params)
+        hconfig = {'cpu': None}
+
+        s1 = self.add_switch('s1')
+
+        host = self.add_host('h1', **hconfig)
+        self.add_link(host, s1, port1=0, port2=1, **src_lconfig)
+
+        sink = self.add_host('sink', **hconfig)
+        self.add_link(s1, sink, cls=Link, port1=0, port2=0,
+                      cls1=TCIntf, cls2=TCIntf,
+                      params1=switch_lconfig, params2=dst_lconfig)
+    def numSources(self):
+        return 1
 
 class Fig6Topo(Topo):
     def __init__(self, red_params=DEFAULT_RED_PARAMS):

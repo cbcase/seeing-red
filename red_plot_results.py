@@ -7,20 +7,10 @@ import glob
 import sys
 from collections import defaultdict
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-o', '--out',
-                    help="Save plot to output file, e.g.: --out plot.png",
-                    dest="out",
-                    default=None)
-
-parser.add_argument('--dir',
-                    dest="dir",
-                    help="Directory from which outputs of the sweep are read.",
-                    required=True)
-
-args = parser.parse_args()
 nruns = 10 # Number of runs for your experiment
 nfiles = 0
+
+font = {'size'   : 20}
 
 def first(lst):
     return map(lambda e: e[0], lst)
@@ -36,6 +26,16 @@ def median(lst):
     lst.sort()
     return lst[l/2]
 
+def parse_one_column_data(filename):
+    l1 = []
+    lines = open(filename).read().split('\n')
+    for l in lines:
+        k = l[0:3]
+        if l.strip() == "" or k.isalpha():
+            continue
+        l1.append(float(l.split(',')[0]))
+    return l1
+
 def parse_two_column_data(filename):
     l1 = []
     l2 = []
@@ -48,64 +48,114 @@ def parse_two_column_data(filename):
         l2 .append(float(l.split(',')[1]))
     return l1, l2
 
-redlog = 'sim1/redlog'
-dtlog = 'sim1/dtlog'
+def parse_four_column_data(filename):
+    l1 = []
+    l2 = []
+    l3 = []
+    l4 = []
+    lines = open(filename).read().split("\n")
+    for l in lines:
+        k = l[0:3]
+        if l.strip() == "" or k.isalpha():
+            continue
+        l1.append(float(l.split(',')[0]))
+        l2.append(float(l.split(',')[1]))
+        l3.append(float(l.split(',')[2]))
+        l4.append(float(l.split(',')[3]))
+    return l1, l2, l3, l4
 
-red_throughput, red_qlen = parse_two_column_data(redlog)
-dt_throughput, dt_qlen = parse_two_column_data(dtlog)
+def plot_debug():
+    testlog = 'test/tp_log'
+    tp = parse_one_column_data(testlog)
+    plt.figure(num=None, figsize=(12,4))
+    plt.plot(range(0,len(tp)), tp, lw=1, c='black')
+    plt.xlabel('Interval (10ms)')
+    plt.ylabel('Throughput (bytes)')
+    print 'Saving to test/bursty_plot'
+    plt.savefig('test/bursty_plot')
+    plt.close()
 
-plt.figure(num=None, figsize=(8,4))
-plt.scatter(red_throughput, red_qlen, s=60, c='r', marker='^', label='RED')
-plt.scatter(dt_throughput, dt_qlen, s=40, c='b', marker='s', label='DropTail')
-#first(plot_quido), second(plot_quido), lw=2, label="RTT*C/$\sqrt{n}$")
-"""
-# Should you want the BDP plot
-plt.plot(first(plot_bdp), second(plot_bdp), lw=2, label="RTT*C")
+def plot_sim1():
+    redlog = 'sim1/redlog'
+    dtlog = 'sim1/dtlog'
 
-# Plot results from Neda's experiment
-parse_nedata2('nedata2.txt')
-median_yneda = []
-keys = list(sorted(nedata.keys()))
-for k in keys:
-    median_yneda.append(median(nedata[k]))
-plt.plot(keys, median_yneda, lw=2, label="Hardware-Median",
-         color="black", ls='--', marker='d', markersize=10)
+    red_throughput, red_qlen = parse_two_column_data(redlog)
+    dt_throughput, dt_qlen = parse_two_column_data(dtlog)
 
+    plt.figure(num=None, figsize=(8,4))
+    plt.scatter(red_throughput, red_qlen, s=60, c='r', marker='^', label='RED')
+    plt.scatter(dt_throughput, dt_qlen, s=60, c='b', marker='s', label='DropTail')
+    #first(plot_quido), second(plot_quido), lw=2, label="RTT*C/$\sqrt{n}$")
 
-keys = list(sorted(data.keys()))
+    plt.xlim((0, 1))
+    plt.legend(loc=2)
+    plt.xlabel("Throughput")
+    plt.ylabel("Average queue length (pkts)")
 
-for i in xrange(nruns):
-    try:
-        values = [mndata[k][i] for k in keys]
-    except:
-        break
+    print "Saving to sim1/sim1plot"
+    plt.savefig('sim1/sim1plot')
+    plt.close()
 
-    if i == 0:
-        label = "Mininet"
-    else:
-        label = ''
-    plt.plot(keys, values,
-             lw=1, label=label, color="red")
+def plot_sim2():
+    redlog = 'sim2/redlog'
+    dtlog = 'sim2/dtlog'
 
-avg_mn = []
-for k in keys:
-    avg_mn.append(avg(data[k]))
+    m.rc('font', **font)  # set font size for all plots
 
-plt.plot(keys, avg_mn, lw=2, label="Mininet", color="red", marker='s', markersize=10)
+    """ Plot RED data """
+    red_bufsize, red_tp, red_n5_tp, red_qlen = parse_four_column_data(redlog)
+    red_n5_tp = [z*100 for z in red_n5_tp]
+    plt.figure(1, figsize=(12, 24))
+    
+    plt.subplot2grid((4,1), (0,0), rowspan=2)
+    plt.plot(red_bufsize, red_n5_tp, lw=6, c='black')
+    plt.ylim(0, 4)
+    plt.xlabel('Minimum Threshold')
+    plt.ylabel('Node 5 Throughput (%)')
+    
+    plt.subplot2grid((4,1), (2,0))
+    plt.plot(red_bufsize, red_qlen, lw=6, c='black')
+    plt.ylim(0, 15)
+    plt.xlabel('Minimum Threshold')
+    plt.ylabel('Average Queue (in packets)')
+ 
+    plt.subplot2grid((4,1), (3,0))
+    plt.plot(red_bufsize, red_tp, lw=6, c='black')
+    plt.ylim(0, 1)
+    plt.xlabel('Minimum Threshold')
+    plt.ylabel('Average Link Utilization')
 
-#plt.xscale('log')
-#plt.yscale('log')
-"""
+    print 'Saving to sim2/redplot'
+    plt.savefig('sim2/redplot')
 
-plt.xlim((0, 1))
-plt.legend(loc=2)
-plt.xlabel("Throughput")
-plt.ylabel("Average queue length (pkts)")
+    
 
-if args.out:
-    print "Saving to %s/%s" % (args.dir, args.out)
-    plt.savefig(args.out)
-else:
-    plt.show()
+    """ Plot DropTail data """
+    dt_bufsize, dt_tp, dt_n5_tp, dt_qlen = parse_four_column_data(dtlog)
+    dt_n5_tp = [z*100 for z in dt_n5_tp]
+
+    plt.figure(1, figsize=(12, 24))
+    
+    plt.subplot2grid((4,1), (0,0), rowspan=2)
+    plt.plot(dt_bufsize, dt_n5_tp, lw=6, c='black')
+    plt.ylim(0, 4)
+    plt.xlabel('Buffer Size')
+    plt.ylabel('Node 5 Throughput (%)')
+    
+    plt.subplot2grid((4,1), (2,0))
+    plt.plot(dt_bufsize, dt_qlen, lw=6, c='black')
+    plt.ylim(0, 15)
+    plt.xlabel('Buffer Size')
+    plt.ylabel('Average Queue (in packets)')
+ 
+    plt.subplot2grid((4,1), (3,0))
+    plt.plot(dt_bufsize, dt_tp, lw=6, c='black')
+    plt.ylim(0, 1)
+    plt.xlabel('Buffer Size')
+    plt.ylabel('Average Link Utilization')
+
+    print 'Saving to sim2/sim2plot'
+    plt.savefig('sim2/dtplot')
+    
 
 
