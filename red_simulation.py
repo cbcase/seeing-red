@@ -392,7 +392,7 @@ def run_simulation_two():
                                 (QLENS_DIR2, buf_size)))
         monitor.start()
 
-        start_senders(net, SIM2_N_SENDERS, write_char=['A']*(SIM2_N_SENDERS-1)+['B'])
+        start_senders(net, SIM2_N_SENDERS, write_char=['A']*(SIM2_N_SENDERS-1)+['B'], do_sleep=True)
         start_receiver(net, SIM2_N_SENDERS, SIM2_LEN_SEC,
                        [SIM2_MAX_WINDOW_HIGH]*(SIM2_N_SENDERS-1) +
                        [SIM2_MAX_WINDOW_LOW], SIM2_SINK_FILE)
