@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <assert.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -13,9 +14,9 @@
 #define SERVER_ADDR "128.12.85.111"
 
 #define MAX_WINDOW_PKTS 1000
-#define MAX_LENGTH_SECONDS 300
+#define MAX_LENGTH_SECONDS 20
 
-unsigned int counts[26];
+unsigned int counts[26][20];
 
 int main(int argc, char *argv[]) {
   if (argc != 4 && argc != 5) {
@@ -83,6 +84,14 @@ int main(int argc, char *argv[]) {
   time_t start_time = time(NULL);
   char buf[128];
   for (;;) {
+    time_t cur_time = time(NULL);
+    if (cur_time - start_time > n_secs) {
+      break;
+    }
+    
+    int diff = (int)(cur_time - start_time);
+    assert (diff >= 0 && diff < MAX_LENGTH_SECONDS);
+
     int bytes_read = read(sock, buf, sizeof buf - 1);
 
     if (track_counts) {
@@ -90,26 +99,38 @@ int main(int argc, char *argv[]) {
       for (i = 0; i < bytes_read; ++i) {
 	int c = buf[i] - 'A';
 	if (0 <= c && c < 26) {
-	  counts[c]++;
+	  counts[c][diff]++;
 	}
       }
-    }
-
-    time_t cur_time = time(NULL);
-    if (cur_time - start_time > n_secs) {
-      break;
     }
   }
   close (sock);
 
   if (track_counts) {
-    unsigned int total = 0;
-    int i;
-    for (i = 0; i < 26; i++) { total += counts[i]; }
-    fprintf(track_file, "%u\n", total);
+    int i, j;
 
-    for (i = 0; i < 26; i++) {
-      fprintf(track_file, "%u\n", counts[i]);
+    for (i = 0; i < n_secs; ++i) {
+      unsigned int total = 0;
+      for (j = 0; j < 26; ++j) {
+	total += counts[j][i];
+      }
+      fprintf (track_file, "%u", total);
+      if (i == n_secs -1) {
+	fprintf(track_file, "\n");
+      } else {
+	fprintf(track_file, " ");
+      }
+    }
+
+    for (i = 0; i < 26; ++i) {
+      for (j = 0; j < n_secs; ++j) {
+	fprintf(track_file, "%u", counts[i][j]);
+	if (j == n_secs - 1) {
+	  fprintf(track_file, "\n");
+	} else {
+	  fprintf(track_file, " ");
+	}
+      }
     }
     fclose(track_file);
   }
