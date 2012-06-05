@@ -110,24 +110,38 @@ def plot_sim2():
     
     plt.subplot2grid((4,1), (0,0), rowspan=2)
     plt.plot(red_bufsize, red_n5_tp, lw=6, c='black')
+    f = open(redlog + 'tp', 'r')
+    lines = f.readlines()
+    f.close()
+    i = 0
+    for line in lines:
+        plt.scatter([red_bufsize[i]]*10,
+                    [100*float(line.split(',')[z]) for z in range(0,10)],
+                    c='black')
+        i += 1
+    
     plt.ylim(0, 4)
+    plt.xlim(2, 15)
     plt.xlabel('Minimum Threshold')
     plt.ylabel('Node 5 Throughput (%)')
     
     plt.subplot2grid((4,1), (2,0))
     plt.plot(red_bufsize, red_qlen, lw=6, c='black')
     plt.ylim(0, 15)
+    plt.xlim(2, 15)
     plt.xlabel('Minimum Threshold')
     plt.ylabel('Average Queue (in packets)')
  
     plt.subplot2grid((4,1), (3,0))
     plt.plot(red_bufsize, red_tp, lw=6, c='black')
     plt.ylim(0, 1)
+    plt.xlim(2, 15)
     plt.xlabel('Minimum Threshold')
     plt.ylabel('Average Link Utilization')
 
     print 'Saving to sim2/redplot'
     plt.savefig('sim2/redplot')
+    plt.close()
 
     
 
@@ -139,24 +153,38 @@ def plot_sim2():
     
     plt.subplot2grid((4,1), (0,0), rowspan=2)
     plt.plot(dt_bufsize, dt_n5_tp, lw=6, c='black')
+    f = open(dtlog + 'tp', 'r')
+    lines = f.readlines()
+    f.close()
+    i = 0
+    for line in lines:
+        plt.scatter([dt_bufsize[i]]*10,
+                    [100*float(line.split(',')[z]) for z in range(0,10)],
+                    c='black')
+        i += 1
+
     plt.ylim(0, 4)
+    plt.xlim(7, 23)
     plt.xlabel('Buffer Size')
     plt.ylabel('Node 5 Throughput (%)')
     
     plt.subplot2grid((4,1), (2,0))
     plt.plot(dt_bufsize, dt_qlen, lw=6, c='black')
     plt.ylim(0, 15)
+    plt.xlim(7, 23)
     plt.xlabel('Buffer Size')
     plt.ylabel('Average Queue (in packets)')
  
     plt.subplot2grid((4,1), (3,0))
     plt.plot(dt_bufsize, dt_tp, lw=6, c='black')
     plt.ylim(0, 1)
+    plt.xlim(7, 23)
     plt.xlabel('Buffer Size')
     plt.ylabel('Average Link Utilization')
 
     print 'Saving to sim2/sim2plot'
     plt.savefig('sim2/dtplot')
+    plt.close()
     
 
 

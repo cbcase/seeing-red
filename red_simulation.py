@@ -237,10 +237,13 @@ def get_n5_throughput_share(n_senders, n_intervals):
 
         total = [total[z] + float(lines[0].split()[z]) for z in range(0, n_intervals)]
         b = [float(lines[2].split()[z]) for z in range(0, n_intervals)]
+        #print T.colored(str(total) + '\n', 'magenta')
+        #print T.colored(str(b) + '\n', 'magenta')
         f.close()
         if i == n_senders:
-           print T.colored(str(sum(b)/sum(total)), 'magenta')
-           return (sum(b)/sum(z)), [b[z]/total[z] for z in range(0, n_intervals)]
+           #print T.colored(str(sum(b)/sum(total)) + '\n', 'magenta')
+           #print T.colored(str([b[z]/total[z] for z in range(0, n_intervals)]) + '\n', 'magenta')
+           return (sum(b)/sum(total)), [b[z]/total[z] for z in range(0, n_intervals)]
 
 def run_debug():
     if not os.path.exists(TEST_DIR):
@@ -365,8 +368,10 @@ def run_simulation_two():
     print T.colored('---------- Simulation 2 ----------', 'green')
 
     logfile = '%s/dtlog' % SIM2_DIR
+    logfile_tp = logfile + 'tp'
     init_log(logfile, 'Buffer size (pkts), Bottleneck throughput (Mbps), '
              + 'Node 5 throughput (Mbps), Avg. queue length\n')
+    init_log(logfile_tp)
     dt_buf_sizes = [k * 2 for k in range(4, 12)]
     for buf_size in dt_buf_sizes:
         print T.colored('Running with buf_size of %d' % buf_size, 'blue');
@@ -392,18 +397,21 @@ def run_simulation_two():
         #TODO: Change '4' below
         rates = get_rates('s1-eth0', SIM2_LEN_SEC, period=1.0, wait=1.0)
         throughput = [float(z)/BW_LOW for z in rates]
-        n5_throughput, lst = get_n5_throughput_share(SIM2_N_SENDERS, SIM2_LEN_SEC)
+        n5_throughput, n5_lst = get_n5_throughput_share(SIM2_N_SENDERS, int(SIM2_LEN_SEC))
         
         avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR2, buf_size))
         write_to_log(logfile, str(buf_size) + ', ' + str(list_mean(throughput)) +
                      ', ' + str(n5_throughput) + ', ' + str(avg_qlen) + '\n')
+        write_to_log(logfile_tp, ",".join([str(z) for z in n5_lst]) + '\n')
         monitor.terminate()
 
         net.stop()
 
     logfile = '%s/redlog' % SIM2_DIR
+    logfile_tp = logfile + 'tp'
     init_log(logfile, 'RED Min (pkts), Bottleneck throughput (Mbps), '
              + 'Node 5 throughput (Mbps), Avg. queue length\n')
+    init_log(logfile_tp)
     red_mins = [k for k in range(3, 15)]
     for red_min in red_mins:
         print T.colored('Running RED with min of %d' % red_min, 'blue')
@@ -430,11 +438,12 @@ def run_simulation_two():
         #TODO: Change '4' below
         rates = get_rates('s1-eth0', SIM2_LEN_SEC, period=1.0, wait=1.0)
         throughput = [float(z)/BW_LOW for z in rates]
-        n5_throughput, lst = get_n5_throughput_share(SIM2_N_SENDERS, SIM2_LEN_SEC)
+        n5_throughput, n5_lst = get_n5_throughput_share(SIM2_N_SENDERS, int(SIM2_LEN_SEC))
 
         avg_qlen = get_avg_qlen('%s/red%d.txt' % (QLENS_DIR2, red_min))
         write_to_log(logfile, str(red_min) + ', ' + str(list_mean(throughput)) +
                      ', ' + str(n5_throughput) + ', ' + str(avg_qlen) + '\n')
+        write_to_log(logfile_tp, ",".join([str(z) for z in n5_lst]) + '\n')
         monitor.terminate()
 
         net.stop()
@@ -471,7 +480,7 @@ def main():
         if args.plot:
             plot_debug()
     if args.sim1:
-        run_simulation_one()
+        #run_simulation_one()
         if args.plot:
             plot_sim1()
     if args.sim2:
