@@ -71,8 +71,9 @@ def plot_debug():
     plt.plot(range(0,len(tp)), tp, lw=1, c='black')
     plt.xlabel('Interval (10ms)')
     plt.ylabel('Throughput (bytes)')
+    plt.title('Bursty traffic generation')
     print 'Saving to test/bursty_plot'
-    plt.savefig('test/bursty_plot')
+    plt.savefig('test/bursty_plot', dpi=300)
     plt.close()
 
 def plot_sim1():

@@ -219,12 +219,12 @@ def get_avg_qlen(filename):
     f.close()
     return list_mean(l)
 
-def get_throughput_share(c, n_senders):
-    total = 0
+def get_n5_throughput_share(n_senders, n_intervals):
+    total = [0]*n_intervals
     for i in range(1, n_senders+1):
         open_count = 0
         while True:
-            open_count = open_count + 1
+            open_count += 1
             if (open_count > 5):
                 sys.exit('Not enough lines in output file')
             f = open('%s%d' % (SIM2_SINK_FILE,i), 'r')
@@ -235,12 +235,12 @@ def get_throughput_share(c, n_senders):
             print 'NOT ENOUGH LINES -- RETRY'
             sleep(1.0)
 
-        total = total + float(lines[0])
-        b = float(lines[2])
+        total = [total[z] + float(lines[0].split()[z]) for z in range(0, n_intervals)]
+        b = [float(lines[2].split()[z]) for z in range(0, n_intervals)]
         f.close()
         if i == n_senders:
-           print T.colored(str(b/total), 'magenta')
-           return b/total
+           print T.colored(str(sum(b)/sum(total)), 'magenta')
+           return (sum(b)/sum(z)), [b[z]/total[z] for z in range(0, n_intervals)]
 
 def run_debug():
     if not os.path.exists(TEST_DIR):
@@ -392,7 +392,7 @@ def run_simulation_two():
         #TODO: Change '4' below
         rates = get_rates('s1-eth0', SIM2_LEN_SEC, period=1.0, wait=1.0)
         throughput = [float(z)/BW_LOW for z in rates]
-        n5_throughput = get_throughput_share('B', SIM2_N_SENDERS)
+        n5_throughput, lst = get_n5_throughput_share(SIM2_N_SENDERS, SIM2_LEN_SEC)
         
         avg_qlen = get_avg_qlen('%s/dt%d.txt' % (QLENS_DIR2, buf_size))
         write_to_log(logfile, str(buf_size) + ', ' + str(list_mean(throughput)) +
@@ -430,7 +430,7 @@ def run_simulation_two():
         #TODO: Change '4' below
         rates = get_rates('s1-eth0', SIM2_LEN_SEC, period=1.0, wait=1.0)
         throughput = [float(z)/BW_LOW for z in rates]
-        n5_throughput = get_throughput_share('B', SIM2_N_SENDERS)
+        n5_throughput, lst = get_n5_throughput_share(SIM2_N_SENDERS, SIM2_LEN_SEC)
 
         avg_qlen = get_avg_qlen('%s/red%d.txt' % (QLENS_DIR2, red_min))
         write_to_log(logfile, str(red_min) + ', ' + str(list_mean(throughput)) +
